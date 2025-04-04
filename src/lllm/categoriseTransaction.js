@@ -10,13 +10,13 @@ const MIN_CATEGORIES = 6;
 
 // Required specific categories (must have at least these)
 const REQUIRED_SPECIFIC_CATEGORIES = [
-  'Essentials', 
-  'Leisure & Entertainment', 
-  'Savings & Investments', 
-  'Debt & Loans', 
-  'Personal & Shopping', 
-  'Uncategorized'
-];
+    'Personal', 
+    'Home expenses', 
+    'Education', 
+    'Leisure_Entertainment', 
+    'Investments_Assets', 
+    'Miscellaneous'
+  ];
 
 /**
  * Process transactions through LLM to categorize them
@@ -31,56 +31,74 @@ async function processTransactionsWithLLM(transactions) {
     ).join('\n');
     
     // Enhanced prompt with very explicit instructions and forced categorization
-    const prompt = `
+        // Enhanced prompt with very explicit instructions and forced categorization
+        const prompt = `
 You are a financial analysis AI. I need you to categorize these financial transactions into EXACTLY the following 6 categories:
-1. Essentials (e.g., rent, groceries, utilities, basic needs)
-2. Leisure & Entertainment (e.g., dining out, movies, subscriptions, hobbies)
-3. Savings & Investments (e.g., deposits to savings accounts, stocks, retirement contributions)
-4. Debt & Loans (e.g., credit card payments, mortgage payments, loan repayments)
-5. Personal & Shopping (e.g., clothes, gadgets, personal care, non-essential shopping)
-6. Uncategorized (anything that doesn't clearly fit the above categories)
+1. Personal (e.g., clothing, personal care items, health expenses, groceries, dining out for individual needs)
+2. Home expenses (e.g., rent, mortgage, utilities, repairs, furniture, household supplies)
+3. Education (e.g., tuition fees, books, courses, tutoring, educational software, school supplies)
+4. Leisure & Entertainment (e.g., movies, games, subscriptions, hobbies, travel, vacations)
+5. Investments & Assets (e.g., stocks, mutual funds, real estate investments, business investments, savings)
+6. Miscellaneous (e.g., any transactions that don't clearly fit the above categories, gifts, donations)
 
-Your task:
+CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE EXACTLY:
 1. Carefully analyze each transaction's title and description
-2. Sort EVERY transaction into one of the above 6 categories - DO NOT create new categories
-3. Calculate the total amount and percentage for each category
-
-IMPORTANT:
-- You MUST use ONLY the 6 categories listed above, no more and no less
-- Analyze the transaction details carefully to make intelligent categorization decisions
-- Make sure both income and expense transactions are appropriately categorized
+2. Sort EVERY transaction into one of the above 6 categories - NO OTHER CATEGORIES
+3. For EACH category, calculate the TOTAL AMOUNT in dollars of all transactions in that category
+4. For EACH category, calculate the PERCENTAGE of total spending it represents
+5. Format your response as valid JSON with amounts and percentages as numbers, not strings
 
 Here are the transactions to categorize:
 ${transactionText}
 
-Format your response EXACTLY as follows (JSON format, no explanations):
+Respond with ONLY this exact JSON structure:
 {
   "categories": [
     {
-      "name": "Essentials",
-      "amount": total amount in dollars,
-      "percentage": percentage as a number (e.g., 25.5 for 25.5%)
+      "name": "Personal",
+      "amount": 1234.56,
+      "percentage": 25.5
+    },
+    {
+      "name": "Home expenses",
+      "amount": 2000.00,
+      "percentage": 30.5
+    },
+    {
+      "name": "Education", 
+      "amount": 500.00,
+      "percentage": 10.0
     },
     {
       "name": "Leisure & Entertainment",
-      "amount": total amount in dollars,
-      "percentage": percentage as a number
+      "amount": 800.00,
+      "percentage": 15.0
     },
-    ...and so on for all 6 categories...
+    {
+      "name": "Investments & Assets",
+      "amount": 900.00,
+      "percentage": 16.5
+    },
+    {
+      "name": "Miscellaneous",
+      "amount": 200.00,
+      "percentage": 3.0
+    }
   ]
 }
 
-Every category MUST be included in your response, even if the amount is 0.
+Include all 6 categories even if some have 0 amount. Always include both amount and percentage as numbers.
 `;
-
     // Call local Llama model with lower temperature for more consistent categorization
     const response = await ollama.chat({
       model: 'llama3:latest',
       messages: [{ role: 'user', content: prompt }],
       options: {
-        temperature: 0.1  // Lower temperature for more consistent results
+        temperature: 0.1,
+        num_ctx:8192
+    }  // Lower temperature for more consistent results
       }
-    });
+);
 
     // Extract response content
     let responseContent = response.message.content.trim();
